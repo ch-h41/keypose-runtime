@@ -278,7 +278,7 @@ def licence_of(meta):
     return lic or ", ".join(cls) or "see its licence files"
 
 
-def collect_licences(L, plat, cache, ffmpeg_dir):
+def collect_licences(L, plat, cache, ffmpeg_dir, vc_runtime=()):
     out = os.path.join(L.rt, "licenses")
     shutil.rmtree(out, ignore_errors=True)
     rows = []
@@ -331,6 +331,20 @@ def collect_licences(L, plat, cache, ffmpeg_dir):
         if os.path.exists(changes):
             shutil.copyfile(changes, os.path.join(dest, "KEYPOSE-CHANGES.txt"))
         rows.append((name, version, licence_of(meta), f"licenses/{name.lower()}/", ""))
+    if vc_runtime:
+        # app-local copies of the Visual C++ runtime, which Microsoft allows redistributing with an
+        # application; numpy's wheel carries one the same way
+        vdir = os.path.join(out, "msvc-runtime")
+        os.makedirs(vdir)
+        with open(os.path.join(vdir, "NOTICE.txt"), "w", encoding="utf-8", newline="\n") as f:
+            f.write("Microsoft Visual C++ runtime files, next to python.exe: " + ", ".join(vc_runtime) + "\n\n"
+                    "Copyright (c) Microsoft Corporation. Redistributed unmodified, as app-local copies, under the\n"
+                    "Visual Studio distributable-code terms for the Visual C++ runtime:\n"
+                    "https://learn.microsoft.com/visualstudio/releases/2022/redistribution#visual-c-runtime-files\n"
+                    "Bundled because onnxruntime and mediapipe need them and a Windows machine is not guaranteed\n"
+                    "to have the Visual C++ Redistributable installed.\n")
+        rows.append(("Microsoft Visual C++ runtime", "", "Microsoft distributable code", "licenses/msvc-runtime/",
+                     ", ".join(vc_runtime)))
     if ffmpeg_dir:
         fdir = os.path.join(out, "ffmpeg")
         shutil.copytree(os.path.join(ffmpeg_dir, "licenses"), fdir)
@@ -598,8 +612,8 @@ def main():
         swapped = swap_ffmpeg(L, ffmpeg_dir)
 
     trim(L)
-    rows = collect_licences(L, plat, cache, ffmpeg_dir)
-    audit_info = audit(L)
+    audit_info = audit(L)                               # before the notices: it can add the MSVC runtime
+    rows = collect_licences(L, plat, cache, ffmpeg_dir, audit_info["vc_runtime_bundled"])
     precompile(L)
     smoke_info = smoke(L, work, a.mediapipe_model)
     manifest(L, plat, rows, swapped, audit_info, smoke_info)
