@@ -321,8 +321,12 @@ def collect_licences(L, plat, cache, ffmpeg_dir):
                     os.makedirs(os.path.dirname(os.path.join(dest, tail)), exist_ok=True)
                     shutil.copyfile(src, os.path.join(dest, tail))
                     files.append(tail)
+        extra = os.path.join(ROOT, "extra-licenses", name.lower())
+        if not files and os.path.isdir(extra):       # a wheel that ships no licence text: the upstream file, kept here
+            shutil.copytree(extra, dest, dirs_exist_ok=True)
+            files = os.listdir(extra)
         if not files:
-            fail(f"{name} {version} ships no licence file - add one by hand or drop the package")
+            fail(f"{name} {version} ships no licence file - add its upstream licence to extra-licenses/{name.lower()}/")
         changes = os.path.join(dist, "KEYPOSE-CHANGES.txt")
         if os.path.exists(changes):
             shutil.copyfile(changes, os.path.join(dest, "KEYPOSE-CHANGES.txt"))

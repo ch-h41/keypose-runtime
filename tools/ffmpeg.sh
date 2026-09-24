@@ -33,7 +33,7 @@ FLAGS=(
   --enable-shared --disable-static
   --disable-programs --disable-doc --disable-debug
   --disable-autodetect                      # nothing from the build machine unless named below
-  --enable-zlib --enable-bzlib --enable-iconv
+  --enable-zlib --enable-bzlib             # (no iconv: only subtitle charset conversion uses it)
   --enable-videotoolbox --enable-audiotoolbox
   --disable-network
   --disable-protocols --enable-protocol=file,pipe
