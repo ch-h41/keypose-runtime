@@ -523,7 +523,7 @@ def precompile(L):
 
 def smoke(L, work, model):
     out = os.path.join(work, "smoke.json")
-    cmd = [L.python, "-E", "-s", os.path.join(ROOT, "tools", "smoke.py"), out] + ([model] if model else [])
+    cmd = [L.python, "-E", "-s", os.path.join(ROOT, "tools", "smoke.py"), out] + ([os.path.abspath(model)] if model else [])   # it runs from the work folder
     r = subprocess.run(cmd, text=True, capture_output=True, cwd=work)
     print(r.stdout[-6000:], r.stderr[-3000:])
     if r.returncode:
