@@ -46,7 +46,8 @@ ship it. The macOS build does three things:
    ([`tools/ffmpeg.sh`](tools/ffmpeg.sh)).
 2. It points OpenCV's `cv2` module at those libraries. Only the library references change; the
    OpenCV code is untouched.
-3. It leaves out the 85 libraries that only the GPL FFmpeg needed.
+3. It removes the GPL FFmpeg and every library only it needed (90 files in 1.0.0, listed in the
+   pack's `licenses/opencv-python-headless/KEYPOSE-CHANGES.txt`).
 
 The build then scans every native file and fails if anything GPL-licensed remains. On Windows,
 OpenCV already uses an LGPL FFmpeg, in its own replaceable `opencv_videoio_ffmpeg*.dll`.

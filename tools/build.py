@@ -221,6 +221,10 @@ def swap_ffmpeg(L, ffmpeg_dir):
 
 
 # ---------------------------------------------------------------- 4. trim
+# Python extension modules trim() deletes: the notices leave them (and licences only they brought) out
+TRIMMED_EXTENSIONS = {"_tkinter"}
+
+
 def trim(L):
     """Only what the engine never runs. Package contents are left whole apart from test suites."""
     rt, gone = L.rt, []
@@ -297,6 +301,8 @@ def collect_licences(L, plat, cache, ffmpeg_dir, vc_runtime=()):
             elif m.name == "python/PYTHON.json":
                 pj = json.load(t.extractfile(m))
                 for ext, variants in pj["build_info"]["extensions"].items():
+                    if ext in TRIMMED_EXTENSIONS:
+                        continue
                     for v in variants:
                         for lic in v.get("licenses") or []:
                             ext_lic.setdefault(lic, set()).add(ext)
