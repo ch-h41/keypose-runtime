@@ -379,8 +379,10 @@ def write_notices(L, plat, rows, swapped):
 
 
 # ---------------------------------------------------------------- 6. audit
-GPL_MARKERS = [re.compile(rb"(?<!L)GPL version [23]"), re.compile(rb"--enable-gpl"), re.compile(rb"x264 - core \d"),
-               re.compile(rb"x265 \(build \d")]
+# FFmpeg compiles exactly one licence string in (avutil_license) and its configure line; a GPL build says
+# "GPL version 2/3 or later" and was configured with --enable-gpl. (Not "x264 - core": the H.264
+# DECODER contains that text to recognise x264-encoded files, so every FFmpeg has it.)
+GPL_MARKERS = [re.compile(rb"(?<!L)GPL version [23]"), re.compile(rb"--enable-gpl")]
 GPL_NAMES = re.compile(r"(libx264|libx265|libpostproc|librubberband|libvidstab|libxvidcore|frei0r)", re.I)
 VC_RUNTIME = re.compile(r"^(msvcp140(_\d+|_atomic_wait|_codecvt_ids)?|vcruntime140(_\d+)?|concrt140|vcomp140)\.dll$", re.I)
 
