@@ -79,7 +79,7 @@ before installing.
 2. Install exactly the locked wheels (`--no-deps --require-hashes --only-binary`), then check that
    no dependency is missing except the ones [`runtime.json`](runtime.json) leaves out on purpose.
 3. On macOS, swap in the LGPL FFmpeg as described above.
-4. Remove what the engine never runs: pip, tkinter/IDLE, headers and NumPy's test suite.
+4. Remove what the engine never runs: pip, tkinter/IDLE, headers and the test suites inside NumPy and MediaPipe.
 5. Collect every licence file into `licenses/` and write `THIRD-PARTY-NOTICES.txt`.
 6. Audit every native library. Each dependency must resolve inside the pack or to the operating
    system. On Windows, the Visual C++ runtime is bundled when something needs it. Nothing may be

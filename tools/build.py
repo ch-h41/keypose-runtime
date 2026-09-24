@@ -257,7 +257,7 @@ def trim(L):
                 rm(os.path.relpath(dyn, rt), f)
     for top, dirs, _ in os.walk(L.site):                # test suites shipped inside wheels
         for d in list(dirs):
-            if d == "tests" and os.path.relpath(top, L.site).split(os.sep)[0] in ("numpy",):
+            if d in ("tests", "test") and os.path.relpath(top, L.site).split(os.sep)[0] in ("numpy", "mediapipe"):
                 rm(os.path.relpath(os.path.join(top, d), rt)); dirs.remove(d)
     log(f"trim: removed {sum(gone) / 1e6:.1f} MB")
 
@@ -361,7 +361,7 @@ def write_notices(L, plat, rows, swapped):
     lines += ["", "Notes", "-----",
               "* Dependencies declared by mediapipe but left out on purpose, because Keypose does not use them:",
               "  " + ", ".join(CFG.get("omitted_dependencies", {}).get("mediapipe", [])) + ".",
-              "* Test suites inside numpy, pip, and Python's tkinter/IDLE are removed to save space."]
+              "* Removed to save space: pip, Python's tkinter/IDLE, and the test suites inside numpy and mediapipe."]
     if swapped:
         lines += ["* opencv-python-headless: on macOS the wheel bundles a GPL-licensed FFmpeg. This runtime",
                   "  replaces it with an LGPL-2.1-or-later FFmpeg built from the official source (see",

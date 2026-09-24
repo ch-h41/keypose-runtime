@@ -48,7 +48,7 @@ def _():
 def _():
     import numpy as np
     a = np.arange(12, dtype=np.float32).reshape(3, 4)
-    assert float((a @ a.T).sum()) == 1586.0
+    assert float((a @ a.T).sum()) == 1134.0          # (sum of the rows) . (sum of the rows)
     return np.__version__
 
 

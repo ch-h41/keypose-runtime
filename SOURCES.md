@@ -49,6 +49,6 @@ Nothing is modified except the following, and each change is written into the pa
 - **macOS, OpenCV:** `cv2.abi3.so` load commands now point to the LGPL FFmpeg above (changed
   with `install_name_tool`, then re-signed ad hoc). The libraries only the replaced GPL FFmpeg
   needed are removed. The full list is in `licenses/opencv-python-headless/KEYPOSE-CHANGES.txt`.
-- **Removed:** pip, tkinter/IDLE/turtledemo/ensurepip, C headers, and NumPy's `tests` folders.
+- **Removed:** pip, tkinter/IDLE/turtledemo/ensurepip, C headers, and the `test`/`tests` folders inside NumPy and MediaPipe.
 - **Added:** `.pyc` files compiled from the shipped sources; on Windows, the Microsoft Visual C++
   runtime DLLs next to `python.exe` when a component needs them.
