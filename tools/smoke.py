@@ -11,6 +11,7 @@ on the first failure; the JSON records versions and timings for the build log.
 import base64, json, os, sys, tempfile, time, types
 
 RESULT = {"ok": False, "checks": {}}
+# Each @check runs as soon as it is defined, top to bottom, so helpers go above the checks using them.
 
 
 def check(name):
@@ -96,6 +97,17 @@ def _():
     return cv2.__version__
 
 
+def ffmpeg_license():
+    """macOS: the FFmpeg that cv2 loads must be the LGPL build this runtime puts in its place."""
+    import ctypes, glob, cv2
+    libs = glob.glob(os.path.join(os.path.dirname(cv2.__file__), ".dylibs", "libavcodec.*.dylib"))
+    if not libs:
+        return None
+    lib = ctypes.CDLL(libs[0])
+    lib.avcodec_license.restype = ctypes.c_char_p
+    return lib.avcodec_license().decode()
+
+
 @check("video")
 def _():
     import cv2, numpy as np
@@ -124,17 +136,6 @@ def _():
         info["ffmpeg_license"] = lic
         assert lic.startswith("LGPL"), f"OpenCV's FFmpeg is {lic}"
     return info
-
-
-def ffmpeg_license():
-    """macOS: the FFmpeg that cv2 loads must be the LGPL build this runtime puts in its place."""
-    import ctypes, glob, cv2
-    libs = glob.glob(os.path.join(os.path.dirname(cv2.__file__), ".dylibs", "libavcodec.*.dylib"))
-    if not libs:
-        return None
-    lib = ctypes.CDLL(libs[0])
-    lib.avcodec_license.restype = ctypes.c_char_p
-    return lib.avcodec_license().decode()
 
 
 @check("mediapipe")
