@@ -1,0 +1,87 @@
+# Builds, checks and (on a v* tag) publishes the runtime packs. Uses only the built-in GITHUB_TOKEN.
+# Actions are pinned by commit so a moved tag cannot change what builds a release.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.14" }
+      - name: Lock files match requirements.in
+        run: |
+          python -m pip install --quiet packaging
+          python tools/lock.py --check
+
+  build:
+    needs: lock
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, platform: darwin-arm64 }
+          - { os: windows-2025, platform: win32-x64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.14" }
+      - name: Cache the LGPL FFmpeg build
+        if: matrix.platform == 'darwin-arm64'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/cache/ffmpeg-*
+          key: ffmpeg-${{ matrix.platform }}-${{ hashFiles('tools/ffmpeg.sh', 'runtime.json') }}
+      - name: MediaPipe model for the smoke test (not shipped)
+        shell: bash
+        run: |
+          mkdir -p build
+          curl -fsSL --retry 3 -o build/holistic_landmarker.task \
+            https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task
+          python -c "import hashlib,sys; h=hashlib.sha256(open('build/holistic_landmarker.task','rb').read()).hexdigest(); print(h); sys.exit(h!='e2dab61191e2dcd0a15f943d8e3ed1dce13c82dfa597b9dd39f562975a50c3f8')"
+      - name: Build
+        run: python tools/build.py --mediapipe-model build/holistic_landmarker.task
+      - name: Unpack the pack as a customer would and run the smoke test again
+        shell: bash
+        run: |
+          mkdir -p check
+          tar -xzf dist/keypose-runtime-*-${{ matrix.platform }}.tar.gz -C check --strip-components=1
+          if [ -x check/bin/python3 ]; then PY=check/bin/python3; else PY=check/python.exe; fi
+          "$PY" -E -s tools/smoke.py check-smoke.json build/holistic_landmarker.task > /dev/null && echo "unpacked runtime OK"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runtime-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.14" }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { path: dist, merge-multiple: true }
+      - name: Tag matches runtime.json
+        run: test "v$(python -c 'import json; print(json.load(open("runtime.json"))["version"])')" = "${GITHUB_REF_NAME}"
+      - name: Assemble (manifest, checksums, LGPL sources, notes)
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: python tools/release.py dist
+      - name: Publish
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Keypose engine runtime ${GITHUB_REF_NAME#v}" --notes-file RELEASE-NOTES.md

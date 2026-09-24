@@ -1,0 +1,7 @@
+build/
+dist/
+check/
+check-smoke.json
+RELEASE-NOTES.md
+__pycache__/
+.DS_Store

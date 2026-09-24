@@ -1,0 +1,38 @@
+{
+  "name": "keypose-runtime",
+  "version": "1.0.0",
+  "platforms": {
+    "darwin-arm64": { "min_os": "14.0", "wheel_platform": "macosx_14_0_arm64" },
+    "win32-x64": { "min_os": "10.0", "wheel_platform": "win_amd64" }
+  },
+  "python": {
+    "version": "3.12.14",
+    "base_url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/",
+    "darwin-arm64": {
+      "install": { "file": "cpython-3.12.14+20260901-aarch64-apple-darwin-install_only.tar.gz", "sha256": "3ee3ee547cedfeb7c2b16b2b7156039f7b470bb8f857e226fd3d2eb11db83c76" },
+      "full": { "file": "cpython-3.12.14+20260901-aarch64-apple-darwin-pgo+lto-full.tar.zst", "sha256": "dbefa04d4107b449e17022f9c78d3eacbd37a1aa8c166c6220dbd95addf3f318" }
+    },
+    "win32-x64": {
+      "install": { "file": "cpython-3.12.14+20260901-x86_64-pc-windows-msvc-install_only.tar.gz", "sha256": "e90c1b6419da3bd812dd73bb3de40287a21abf153438147639ec5e20375ea93f" },
+      "full": { "file": "cpython-3.12.14+20260901-x86_64-pc-windows-msvc-pgo-full.tar.zst", "sha256": "b7cf8be5cd5222d1e456fbf71257efe558d84fe092757b6892c16584e5df01c2" }
+    }
+  },
+  "ffmpeg": {
+    "version": "7.1.5",
+    "url": "https://ffmpeg.org/releases/ffmpeg-7.1.5.tar.xz",
+    "sha256": "de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f",
+    "signed_by": "FCF986EA15E6E293A5644F10B4322F04D67658D8",
+    "platforms": ["darwin-arm64"]
+  },
+  "sources": [
+    { "for": "FFmpeg in the macOS runtime (built by tools/ffmpeg.sh)", "file": "ffmpeg-7.1.5.tar.xz",
+      "url": "https://ffmpeg.org/releases/ffmpeg-7.1.5.tar.xz", "sha256": "de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f" },
+    { "for": "FFmpeg in the Windows runtime (OpenCV's opencv_videoio_ffmpeg DLL, built from tag n7.1)", "file": "ffmpeg-7.1.tar.xz",
+      "url": "https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz", "sha256": "40973d44970dbc83ef302b0609f2e74982be2d85916dd2ee7472d30678a7abe6" },
+    { "for": "OpenCV's build scripts for that Windows DLL", "file": "opencv-videoio-ffmpeg-build-06dc20c.tar.gz",
+      "github": "opencv/opencv_3rdparty", "commit": "06dc20cad65dc7fcf784f70c95d46750520889a7", "path": "ffmpeg/", "skip": "\\.dll$" }
+  ],
+  "omitted_dependencies": {
+    "mediapipe": ["matplotlib", "sounddevice", "opencv-contrib-python"]
+  }
+}

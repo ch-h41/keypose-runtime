@@ -1,0 +1,26 @@
+# Every Python package in the Keypose engine runtime: the complete set, not just the top level.
+# Nothing is resolved at build time. tools/lock.py pins each line to exactly one wheel per platform by
+# sha256 (lock/<platform>.txt), and the build installs exactly those with --no-deps. So adding a
+# package means adding its dependencies here too, on purpose, and every file in a release can be
+# traced back to one line of this file.
+
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
+
+onnxruntime==1.30.0
+flatbuffers==25.12.19          # onnxruntime
+packaging==26.3                # onnxruntime
+protobuf==7.36.2               # onnxruntime
+
+# The optional MediaPipe pose backend. It also declares matplotlib, sounddevice and
+# opencv-contrib-python, which are left out on purpose (runtime.json "omitted_dependencies"):
+#   - matplotlib is imported only by its drawing helpers, which Keypose never calls; the engine
+#     stubs it (helper/mp_engine.py). Leaving it out also leaves out pillow, fonttools and ~70 MB.
+#   - sounddevice is for its audio tasks.
+#   - opencv-contrib-python installs into the SAME cv2 folder as opencv-python-headless and
+#     silently replaces it; one OpenCV is the point.
+# tools/smoke.py imports MediaPipe's vision tasks, so a new version that really needs one of these
+# fails the build rather than a customer's first track.
+mediapipe==0.10.35
+absl-py==2.5.0                 # mediapipe
+certifi==2026.7.22             # mediapipe
