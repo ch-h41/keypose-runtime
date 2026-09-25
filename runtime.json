@@ -33,6 +33,7 @@
       "github": "opencv/opencv_3rdparty", "commit": "06dc20cad65dc7fcf784f70c95d46750520889a7", "path": "ffmpeg/", "skip": "\\.dll$" }
   ],
   "omitted_dependencies": {
-    "mediapipe": ["matplotlib", "sounddevice", "opencv-contrib-python"]
+    "mediapipe": ["matplotlib", "sounddevice", "opencv-contrib-python"],
+    "onnxruntime-directml": ["sympy", "coloredlogs"]
   }
 }

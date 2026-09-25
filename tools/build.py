@@ -379,9 +379,10 @@ def write_notices(L, plat, rows, swapped):
         if note:
             lines.append(f"{''.ljust(w)}  {''.ljust(10)}  ({note})")
     lines += ["", "Notes", "-----",
-              "* Dependencies declared by mediapipe but left out on purpose, because Keypose does not use them:",
-              "  " + ", ".join(CFG.get("omitted_dependencies", {}).get("mediapipe", [])) + ".",
-              "* Removed to save space: pip, Python's tkinter/IDLE, and the test suites inside numpy and mediapipe."]
+              "* Dependencies declared but left out on purpose, because Keypose does not use them:"]
+    have = {n.lower() for n, _, _, _ in installed(L)}
+    lines += [f"  {k}: {', '.join(v)}." for k, v in CFG.get("omitted_dependencies", {}).items() if k.lower() in have]
+    lines += ["* Removed to save space: pip, Python's tkinter/IDLE, and the test suites inside numpy and mediapipe."]
     if swapped:
         lines += ["* opencv-python-headless: on macOS the wheel bundles a GPL-licensed FFmpeg. This runtime",
                   "  replaces it with an LGPL-2.1-or-later FFmpeg built from the official source (see",

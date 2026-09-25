@@ -63,20 +63,61 @@ MODEL = base64.b64decode(
 @check("onnxruntime")
 def _():
     import numpy as np, onnxruntime as ort
+    from importlib import metadata
+    # Every onnxruntime variant installs into the same onnxruntime/ folder, so two of them silently
+    # overwrite each other (the usual cause of "only the CPU provider is available").
+    dists = sorted({d.metadata["Name"].lower() for d in metadata.distributions()
+                    if d.metadata["Name"] and d.metadata["Name"].lower().startswith("onnxruntime") and not d.metadata["Name"].lower().startswith("onnxruntime-ep-")})
+    assert len(dists) == 1, f"more than one onnxruntime package installed: {dists}"
     x = np.array([[1, 2, 3]], np.float32)
     want = np.array([[2.2, 3.8, 5.4, 7.0]], np.float32)
-    out = {"version": ort.__version__, "providers": ort.get_available_providers()}
+    plugin = None
+    try:
+        import onnxruntime_ep_webgpu as plugin      # an add-on execution provider (onnxruntime 1.23+)
+    except ImportError:
+        pass
+    if plugin:
+        ort.register_execution_provider_library(plugin.get_ep_name(), plugin.get_library_path())
+    out = {"version": ort.__version__, "package": dists[0], "providers": ort.get_available_providers()}
+    if dists[0] == "onnxruntime-directml":
+        assert "DmlExecutionProvider" in out["providers"], out["providers"]
+        dll = os.path.join(os.path.dirname(ort.__file__), "capi", "DirectML.dll")
+        assert os.path.isfile(dll), "DirectML.dll is not in the package"
+    if plugin:
+        assert plugin.get_ep_name() in out["providers"], out["providers"]
     cpu = ort.InferenceSession(MODEL, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
     assert np.allclose(cpu, want, atol=1e-5), cpu
-    for ep in ("CoreMLExecutionProvider", "DmlExecutionProvider", "CUDAExecutionProvider"):
-        if ep in out["providers"]:
-            so = ort.SessionOptions()
-            if ep == "DmlExecutionProvider":
-                so.enable_mem_pattern = False
-                so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-            gpu = ort.InferenceSession(MODEL, so, providers=[ep, "CPUExecutionProvider"]).run(None, {"X": x})[0]
-            assert np.allclose(gpu, want, atol=1e-3), (ep, gpu)
-            out["gpu"] = ep
+    # The GPU run itself is only required when KEYPOSE_SMOKE_GPU=require: build machines in CI have
+    # no graphics card, so there a provider that cannot find a GPU is recorded, not a failure. A GPU
+    # that does run must give the right answer.
+    for ep in ("CoreMLExecutionProvider", "DmlExecutionProvider", "WebGpuExecutionProvider", "CUDAExecutionProvider"):
+        if ep not in out["providers"]:
+            continue
+        so = ort.SessionOptions()
+        try:
+            if ep == "WebGpuExecutionProvider":
+                dev = next((d for d in ort.get_ep_devices() if d.ep_name == ep), None)
+                if dev is None:
+                    raise RuntimeError("no WebGPU adapter")
+                so.add_provider_for_devices([dev], {"powerPreference": "high-performance"})
+                sess = ort.InferenceSession(MODEL, so)
+            else:
+                opts = {}
+                if ep == "DmlExecutionProvider":
+                    so.enable_mem_pattern = False
+                    so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+                    opts = {"performance_preference": "high_performance", "device_filter": "gpu"}
+                sess = ort.InferenceSession(MODEL, so, providers=[(ep, opts), "CPUExecutionProvider"])
+            if sess.get_providers()[0] != ep:     # onnxruntime quietly falls back to the CPU
+                raise RuntimeError(f"{ep} did not start")
+        except Exception as e:
+            if os.environ.get("KEYPOSE_SMOKE_GPU") == "require":
+                raise
+            out.setdefault("gpu_unavailable", {})[ep] = f"{type(e).__name__}: {str(e)[:200]}"
+            continue
+        gpu = sess.run(None, {"X": x})[0]
+        assert np.allclose(gpu, want, atol=1e-3), (ep, gpu)
+        out.setdefault("gpu", ep)                 # the first provider that ran (the engine prefers the same order)
     return out
 
 
