@@ -8,6 +8,8 @@ numpy==2.5.3
 opencv-python-headless==5.0.0.93
 
 onnxruntime==1.30.0
+# Windows: the WebGPU add-on provider (any DirectX 12 GPU, through Dawn). It adds to onnxruntime.
+onnxruntime-ep-webgpu==0.4.0 ; sys_platform == "win32"
 flatbuffers==25.12.19          # onnxruntime
 packaging==26.3                # onnxruntime
 protobuf==7.36.2               # onnxruntime

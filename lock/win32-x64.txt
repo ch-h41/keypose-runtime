@@ -6,6 +6,8 @@ numpy==2.5.3 --hash=sha256:0a59a421a32580a009e8a1751345bf829631b990dc1794b80514a
 opencv-python-headless==5.0.0.93 --hash=sha256:829717b6a95554f273e49e357cee3b3a2a26b6f4842fbc1bed2b45bdd8f87e0e
 # onnxruntime-1.30.0-cp312-cp312-win_amd64.whl (14.3 MB)
 onnxruntime==1.30.0 --hash=sha256:f3501472571f1b1eee50e017851e7929f5ea37312d2d8c2494a19e8fc58b4a38
+# onnxruntime_ep_webgpu-0.4.0-py3-none-win_amd64.whl (13.1 MB)
+onnxruntime-ep-webgpu==0.4.0 --hash=sha256:7db646669d1a2390551da675115ea125e68cb3d4d2c3a2d6e463372bf8d6ea87
 # flatbuffers-25.12.19-py2.py3-none-any.whl (0.0 MB)
 flatbuffers==25.12.19 --hash=sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4
 # packaging-26.3-py3-none-any.whl (0.1 MB)
