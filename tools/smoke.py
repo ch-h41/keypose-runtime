@@ -83,8 +83,8 @@ def _():
         assert "DmlExecutionProvider" in out["providers"], out["providers"]
         dll = os.path.join(os.path.dirname(ort.__file__), "capi", "DirectML.dll")
         assert os.path.isfile(dll), "DirectML.dll is not in the package"
-    if plugin:
-        assert plugin.get_ep_name() in out["providers"], out["providers"]
+    if plugin:   # registering it loaded its DLLs; it lists itself as a provider only when it finds a graphics adapter
+        out["plugin_devices"] = [f"{d.ep_name} ({d.device.vendor})" for d in ort.get_ep_devices() if d.ep_name == plugin.get_ep_name()]
     cpu = ort.InferenceSession(MODEL, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
     assert np.allclose(cpu, want, atol=1e-5), cpu
     # The GPU run itself is only required when KEYPOSE_SMOKE_GPU=require: build machines in CI have
