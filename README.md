@@ -24,6 +24,7 @@ MediaPipe has none at all.
 | NumPy | BSD-3-Clause and bundled permissive licences |
 | OpenCV (`opencv-python-headless`) | Apache-2.0, plus bundled libraries (see below for FFmpeg) |
 | FFmpeg (the parts OpenCV uses to read video) | **LGPL-2.1-or-later** |
+| dav1d, the AV1 decoder inside the macOS FFmpeg | BSD-2-Clause |
 | ONNX Runtime, flatbuffers, protobuf, packaging | MIT, Apache-2.0, BSD-3-Clause, Apache-2.0 OR BSD-2-Clause |
 | MediaPipe, absl-py | Apache-2.0 |
 | certifi | MPL-2.0 |

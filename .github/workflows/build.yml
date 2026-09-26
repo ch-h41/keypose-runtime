@@ -46,6 +46,9 @@ jobs:
         with:
           path: build/cache/ffmpeg-*
           key: ffmpeg-${{ matrix.platform }}-${{ hashFiles('tools/ffmpeg.sh', 'runtime.json') }}
+      - name: pkg-config, for FFmpeg to find the static dav1d (tools/ffmpeg.sh)
+        if: matrix.platform == 'darwin-arm64'
+        run: command -v pkg-config || brew install pkgconf
       - name: MediaPipe model for the smoke test (not shipped)
         shell: bash
         run: |

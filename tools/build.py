@@ -357,6 +357,8 @@ def collect_licences(L, plat, cache, ffmpeg_dir, vc_runtime=()):
         shutil.copyfile(os.path.join(ffmpeg_dir, "BUILD.txt"), os.path.join(fdir, "BUILD.txt"))
         rows.append(("FFmpeg (libraries used by OpenCV)", CFG["ffmpeg"]["version"], "LGPL-2.1-or-later", "licenses/ffmpeg/",
                      "built by this project, see licenses/ffmpeg/BUILD.txt"))
+        rows.append(("  in FFmpeg: dav1d (AV1 decoder)", CFG["dav1d"]["version"], CFG["dav1d"]["licence"], "licenses/ffmpeg/dav1d-COPYING",
+                     "linked statically into libavcodec"))
     write_notices(L, plat, rows, bool(ffmpeg_dir))
     return rows
 

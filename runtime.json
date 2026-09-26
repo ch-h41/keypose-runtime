@@ -24,9 +24,20 @@
     "signed_by": "FCF986EA15E6E293A5644F10B4322F04D67658D8",
     "platforms": ["darwin-arm64"]
   },
+  "dav1d": {
+    "version": "1.5.4",
+    "url": "https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz",
+    "sha256": "686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5",
+    "licence": "BSD-2-Clause",
+    "why": "AV1 decoding in the macOS FFmpeg (FFmpeg's own AV1 decoder only drives hardware decoders); linked statically into libavcodec",
+    "build_tools": { "meson": "1.12.1", "ninja": "1.13.2" },
+    "platforms": ["darwin-arm64"]
+  },
   "sources": [
     { "for": "FFmpeg in the macOS runtime (built by tools/ffmpeg.sh)", "file": "ffmpeg-7.1.5.tar.xz",
       "url": "https://ffmpeg.org/releases/ffmpeg-7.1.5.tar.xz", "sha256": "de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f" },
+    { "for": "dav1d, the AV1 decoder inside the macOS FFmpeg (built by tools/ffmpeg.sh)", "file": "dav1d-1.5.4.tar.xz",
+      "url": "https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz", "sha256": "686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5" },
     { "for": "FFmpeg in the Windows runtime (OpenCV's opencv_videoio_ffmpeg DLL, built from tag n7.1)", "file": "ffmpeg-7.1.tar.xz",
       "url": "https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz", "sha256": "40973d44970dbc83ef302b0609f2e74982be2d85916dd2ee7472d30678a7abe6" },
     { "for": "OpenCV's build scripts for that Windows DLL", "file": "opencv-videoio-ffmpeg-build-06dc20c.tar.gz",

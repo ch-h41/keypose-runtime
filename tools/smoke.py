@@ -4,7 +4,7 @@ interpreter, isolated from the build machine's environment:
     <runtime>/bin/python3 -E -s tools/smoke.py <result.json> [holistic_landmarker.task]
 
 Exercises what the Keypose engine actually uses: numpy, ONNX Runtime on the CPU and on the GPU
-provider when there is one, OpenCV image operations and NMS, FFmpeg video decode with a frame seek,
+provider when there is one, OpenCV image operations and NMS, FFmpeg video decode with a frame seek and AV1,
 and MediaPipe's native library (a full landmarker run when a model file is given). Exits non-zero
 on the first failure; the JSON records versions and timings for the build log.
 """
@@ -177,6 +177,47 @@ def _():
         info["ffmpeg_license"] = lic
         assert lic.startswith("LGPL"), f"OpenCV's FFmpeg is {lic}"
     return info
+
+
+# 8 frames of AV1 (128x72, 1.2 KB, SVT-AV1): frame i is grey level 16 + 24i. Keypose reads AV1 exports and downloads;
+# FFmpeg's own AV1 decoder only drives hardware decoders, so a pack needs a software one (macOS: dav1d, built into
+# FFmpeg by tools/ffmpeg.sh; Windows: libaom, in OpenCV's FFmpeg DLL).
+AV1_CLIP = (
+    "AAAAIGZ0eXBpc29tAAACAGlzb21hdjAxaXNvMm1wNDEAAANPbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAAUAAAQAAAQAA"
+    "AAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAA"
+    "Anp0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAAUAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAA"
+    "AAAAAAAAAAAAAABAAAAAAIAAAABIAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAFAAAAAAAABAAAAAAHybWRpYQAAACBtZGhk"
+    "AAAAAAAAAAAAAAAAAAAyAAAAEABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABnW1p"
+    "bmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAV1zdGJsAAAArXN0c2QA"
+    "AAAAAAAAAQAAAJ1hdjAxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAIAASABIAAAASAAAAAAAAAABFkxhdmM2My4xLjEwMSBsaWJz"
+    "dnRhdjEAAAAAAAAAAAAAGP//AAAAGWF2MUOBAAwACgsCAAAFWb/HAL4AEAAAAApmaWVsAQAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0"
+    "cnQAAAAAAAAZSwAAGUsAAAAYc3R0cwAAAAAAAAABAAAACAAAAgAAAAAYc3RzcwAAAAAAAAACAAAAAQAAAAUAAAAUc2R0cAAAAAAg"
+    "GBAYIBgQGAAAABxzdHNjAAAAAAAAAAEAAAABAAAACAAAAAEAAAA0c3RzegAAAAAAAAAAAAAACAAAACIAAABAAAAAAwAAAB0AAAAh"
+    "AAAAQAAAAAMAAAAdAAAAFHN0Y28AAAAAAAAAAQAAA38AAABhdWR0YQAAAFltZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBw"
+    "bAAAAAAAAAAAAAAAACxpbHN0AAAAJKl0b28AAAAcZGF0YQAAAAEAAAAATGF2ZjYzLjEuMTAxAAAACGZyZWUAAAELbWRhdAoLAgAA"
+    "BVm/xxq+YBAyExAAhMCAQQAAAAACACJ7qt9nFVAyHygCAEAAAD0UABBAggQAADAAFTN6EGUQVthySWedc3wyHTACAAAASXooAAAA"
+    "gAADAAAV0dEKl+V647ul3MmcGgGYMhswBgAEEkl6KAAAAIAAAAAfdE0xZM+BCgSzCIAKCwIAAAVZv8cavmAQMhIQEITAgEEAAAAA"
+    "AgAifan8RVQyHygGAEAAAD0UABBAggQAADAAFTN6EGUQVthySWedc3wyHTAKAAAASXooAAAAgAADAAAV0dEKl+V647ul3MmcGgGY"
+    "MhswDgAEEkl6KAAAAIAAAAAfdE0xZM+BCgSzCIA="
+)
+
+
+@check("av1")
+def _():
+    import cv2
+    d = tempfile.mkdtemp(prefix="keypose-smoke-")
+    path = os.path.join(d, "av1.mp4")
+    with open(path, "wb") as f: f.write(base64.b64decode("".join(AV1_CLIP)))
+    cap = cv2.VideoCapture(path, cv2.CAP_FFMPEG)
+    means = []
+    while True:
+        ok, f = cap.read()
+        if not ok: break
+        means.append(round(float(f.mean())))
+    cap.release(); os.remove(path); os.rmdir(d)
+    assert len(means) == 8, f"decoded {len(means)} of 8 AV1 frames (no software AV1 decoder?)"
+    assert all(abs(m - 28 * i) < 8 for i, m in enumerate(means)), means
+    return {"frames": len(means)}
 
 
 @check("mediapipe")

@@ -11,7 +11,7 @@ source is always available from the same place as the binaries.
 
 | Pack | FFmpeg | Built by | Source attached to the release |
 |---|---|---|---|
-| macOS arm64 | 7.1.5, LGPL-2.1-or-later, shared libraries in `lib/python3.12/site-packages/cv2/.dylibs/` (`libavcodec`, `libavformat`, `libavutil`, `libswscale`, `libavdevice`) | this repository: [`tools/ffmpeg.sh`](tools/ffmpeg.sh) has the full configure line, and each pack has it again in `licenses/ffmpeg/BUILD.txt` | `ffmpeg-7.1.5.tar.xz`, the official release, signed by the FFmpeg release key `FCF986EA15E6E293A5644F10B4322F04D67658D8` |
+| macOS arm64 | 7.1.5, LGPL-2.1-or-later, shared libraries in `lib/python3.12/site-packages/cv2/.dylibs/` (`libavcodec`, `libavformat`, `libavutil`, `libswscale`, `libavdevice`) | this repository: [`tools/ffmpeg.sh`](tools/ffmpeg.sh) has the full configure line, and each pack has it again in `licenses/ffmpeg/BUILD.txt`. It includes dav1d 1.5.4 (BSD-2-Clause, VideoLAN) for AV1, linked statically into `libavcodec`; its source is attached too | `ffmpeg-7.1.5.tar.xz`, the official release, signed by the FFmpeg release key `FCF986EA15E6E293A5644F10B4322F04D67658D8` |
 | Windows x64 | 7.1 (tag `n7.1`), LGPL-2.1-or-later, statically linked into `Lib/site-packages/cv2/opencv_videoio_ffmpeg500_64.dll` | the OpenCV project, [opencv_3rdparty@06dc20c](https://github.com/opencv/opencv_3rdparty/tree/06dc20cad65dc7fcf784f70c95d46750520889a7/ffmpeg) | `ffmpeg-7.1.tar.xz` (official release, same key) and `opencv-videoio-ffmpeg-build-06dc20c.tar.gz` (OpenCV's build scripts for the DLL) |
 
 You may replace these libraries with your own build:
