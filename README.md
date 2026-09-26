@@ -24,6 +24,7 @@ MediaPipe has none at all.
 | NumPy | BSD-3-Clause and bundled permissive licences |
 | OpenCV (`opencv-python-headless`) | Apache-2.0, plus bundled libraries (see below for FFmpeg) |
 | FFmpeg (the parts OpenCV uses to read video) | **LGPL-2.1-or-later** |
+| dav1d, the AV1 decoder inside the macOS FFmpeg | BSD-2-Clause |
 | ONNX Runtime, flatbuffers, protobuf, packaging | MIT, Apache-2.0, BSD-3-Clause, Apache-2.0 OR BSD-2-Clause |
 | MediaPipe, absl-py | Apache-2.0 |
 | certifi | MPL-2.0 |
@@ -51,6 +52,17 @@ ship it. The macOS build does three things:
 
 The build then scans every native file and fails if anything GPL-licensed remains. On Windows,
 OpenCV already uses an LGPL FFmpeg, in its own replaceable `opencv_videoio_ffmpeg*.dll`.
+
+### No telemetry
+
+MediaPipe's PyPI builds include a client that uploads usage statistics to Google
+(`https://play.googleapis.com/log`). It is not in MediaPipe's open-source code and has no setting to
+turn it off ([google-ai-edge/mediapipe#6291](https://github.com/google-ai-edge/mediapipe/issues/6291)).
+The engine never needs the internet, so the build overwrites that address inside `libmediapipe` with
+one under `.invalid`, a name that can never resolve, and nothing is sent. The library is otherwise
+unchanged; on macOS it is re-signed ad hoc. The change is listed in the pack's
+`licenses/mediapipe/KEYPOSE-CHANGES.txt`. The build fails if a new MediaPipe no longer has the
+address where expected, and the audit fails if any native file in the pack still names a telemetry host.
 
 ## Checking a download
 
@@ -80,11 +92,12 @@ before installing.
 2. Install exactly the locked wheels (`--no-deps --require-hashes --only-binary`), then check that
    no dependency is missing except the ones [`runtime.json`](runtime.json) leaves out on purpose.
 3. On macOS, swap in the LGPL FFmpeg as described above.
+   Then cut MediaPipe's telemetry address, as described above.
 4. Remove what the engine never runs: pip, tkinter/IDLE, headers and the test suites inside NumPy and MediaPipe.
 5. Collect every licence file into `licenses/` and write `THIRD-PARTY-NOTICES.txt`.
 6. Audit every native library. Each dependency must resolve inside the pack or to the operating
    system. On Windows, the Visual C++ runtime is bundled when something needs it. Nothing may be
-   GPL.
+   GPL, and nothing may name a telemetry host.
 7. Precompile, then run [`tools/smoke.py`](tools/smoke.py) with the pack's own interpreter. The
    smoke test covers ONNX Runtime on the CPU and GPU, OpenCV image operations, video decoding with
    a frame seek, and a MediaPipe landmarker run. CI then unpacks the finished archive the way a

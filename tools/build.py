@@ -10,6 +10,7 @@ Every step can fail the build; nothing unverified is packed:
   1. python     fetch the pinned CPython (python-build-standalone), check its sha256, unpack
   2. packages   install exactly lock/<platform>.txt (--no-deps --require-hashes --only-binary)
   3. ffmpeg     macOS: replace OpenCV's GPL FFmpeg with the LGPL build from tools/ffmpeg.sh
+  3b. telemetry cut the address MediaPipe uploads usage metrics to, so nothing leaves the machine
   4. trim       drop what an engine never runs (pip, tkinter, headers, test suites)
   5. licences   every component's licence files -> licenses/, summary -> THIRD-PARTY-NOTICES.txt
   6. audit      every native library resolves inside the pack or to the OS; none is GPL
@@ -220,6 +221,46 @@ def swap_ffmpeg(L, ffmpeg_dir):
     return {"relinked": changed, "removed": removed}
 
 
+# ---------------------------------------------------------------- 3b. telemetry
+# MediaPipe's PyPI builds (from about 0.10.22; not in its open-source repository) carry Google's Clearcut client, which
+# uploads usage metrics to this address, with no documented way to turn it off (google-ai-edge/mediapipe#6291). The
+# engine never needs the network, so the address is overwritten in place with one of the same length under .invalid,
+# a name that never resolves (RFC 2606): the upload fails its lookup and nothing leaves the machine. A MediaPipe that
+# no longer has the address where expected fails the build rather than shipping unchecked, and audit() fails on any
+# native file in the pack that still names a telemetry host.
+TELEMETRY_URLS = [b"https://play.googleapis.com/log"]
+TELEMETRY_HOSTS = re.compile(rb"play\.googleapis\.com|firebaselogging[a-z-]*\.googleapis\.com|app-measurement\.com")
+
+
+def no_telemetry(L):
+    lib = os.path.join(L.site, "mediapipe", "tasks", "c", "libmediapipe." + ("dll" if L.win else "dylib" if L.plat.startswith("darwin") else "so"))
+    if not os.path.exists(lib):
+        fail(f"telemetry: {os.path.relpath(lib, L.rt)} not found; check the new MediaPipe for telemetry before shipping it")
+    with open(lib, "rb") as f:
+        blob = f.read()
+    cut = []
+    for url in TELEMETRY_URLS:
+        n = blob.count(url)
+        if not n:
+            fail(f"telemetry: {url.decode()} is not in {os.path.basename(lib)}; check the new MediaPipe for telemetry before shipping it")
+        off = (b"https://telemetry-off.invalid/" + b"x" * len(url))[:len(url)]
+        blob = blob.replace(url, off)
+        cut.append((url.decode(), off.decode(), n))
+    with open(lib, "wb") as f:
+        f.write(blob)
+    if is_macho(lib):
+        run(["codesign", "--force", "--sign", "-", lib])     # the edit voids the signature; arm64 refuses unsigned code
+    dist = [d for d in os.listdir(L.site) if d.startswith("mediapipe-") and d.endswith(".dist-info")][0]
+    with open(os.path.join(L.site, dist, "KEYPOSE-CHANGES.txt"), "w", encoding="utf-8") as f:
+        f.write("keypose-runtime changed this package after installing it (tools/build.py no_telemetry):\n\n"
+                f"mediapipe/tasks/c/{os.path.basename(lib)} contains a client that uploads usage metrics to Google. The address\n"
+                "it uploads to was overwritten in place with one that never resolves, so nothing is sent"
+                + (", and the library was\nre-signed ad hoc" if is_macho(lib) else "") + ". MediaPipe's own code is otherwise unchanged.\n\n"
+                + "".join(f"  {a} -> {b} ({n}x)\n" for a, b, n in cut))
+    log("telemetry: cut " + ", ".join(f"{a} ({n}x)" for a, _, n in cut) + " in " + os.path.basename(lib))
+    return [{"from": a, "to": b, "count": n} for a, b, n in cut]
+
+
 # ---------------------------------------------------------------- 4. trim
 # Python extension modules trim() deletes: the notices leave them (and licences only they brought) out
 TRIMMED_EXTENSIONS = {"_tkinter"}
@@ -357,6 +398,8 @@ def collect_licences(L, plat, cache, ffmpeg_dir, vc_runtime=()):
         shutil.copyfile(os.path.join(ffmpeg_dir, "BUILD.txt"), os.path.join(fdir, "BUILD.txt"))
         rows.append(("FFmpeg (libraries used by OpenCV)", CFG["ffmpeg"]["version"], "LGPL-2.1-or-later", "licenses/ffmpeg/",
                      "built by this project, see licenses/ffmpeg/BUILD.txt"))
+        rows.append(("  in FFmpeg: dav1d (AV1 decoder)", CFG["dav1d"]["version"], CFG["dav1d"]["licence"], "licenses/ffmpeg/dav1d-COPYING",
+                     "linked statically into libavcodec"))
     write_notices(L, plat, rows, bool(ffmpeg_dir))
     return rows
 
@@ -465,6 +508,9 @@ def audit(L):
             if hit:
                 problems.append(f"{rel}: contains {hit.group(0)[:40]!r} (GPL-licensed code)")
                 break
+        hit = TELEMETRY_HOSTS.search(blob)
+        if hit:
+            problems.append(f"{rel}: names the telemetry host {hit.group(0).decode()} (see no_telemetry)")
         if L.win:
             imp = pe_imports(p)
             here = [os.path.dirname(p), L.rt, os.path.join(L.rt, "DLLs")]
@@ -539,12 +585,12 @@ def smoke(L, work, model):
 
 
 # ---------------------------------------------------------------- 8. pack
-def manifest(L, plat, rows, ffmpeg, audit_info, smoke_info):
+def manifest(L, plat, rows, ffmpeg, telemetry, audit_info, smoke_info):
     m = {
         "name": CFG["name"], "version": VERSION, "platform": plat, "min_os": CFG["platforms"][plat]["min_os"],
         "python": CFG["python"]["version"],
         "packages": {n: v for n, v, _, _ in installed(L)},
-        "ffmpeg_replaced": ffmpeg, "audit": audit_info,
+        "ffmpeg_replaced": ffmpeg, "telemetry_cut": telemetry, "audit": audit_info,
         "smoke": {k: v.get("info") for k, v in smoke_info["checks"].items()},
         "source": REPO_URL, "commit": os.environ.get("GITHUB_SHA", "local"),
         "built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -618,12 +664,13 @@ def main():
             subprocess.run(["bash", os.path.join(ROOT, "tools", "ffmpeg.sh"), ffmpeg_dir], check=True)
         swapped = swap_ffmpeg(L, ffmpeg_dir)
 
+    telemetry = no_telemetry(L)
     trim(L)
     audit_info = audit(L)                               # before the notices: it can add the MSVC runtime
     rows = collect_licences(L, plat, cache, ffmpeg_dir, audit_info["vc_runtime_bundled"])
     precompile(L)
     smoke_info = smoke(L, work, a.mediapipe_model)
-    manifest(L, plat, rows, swapped, audit_info, smoke_info)
+    manifest(L, plat, rows, swapped, telemetry, audit_info, smoke_info)
     pack(L, plat, os.path.abspath(a.out))
 
 
